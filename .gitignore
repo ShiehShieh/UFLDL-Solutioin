@@ -1,0 +1,25 @@
+# Mac
+.DS_Store
+
+# Vim
+*.swp
+*.swo
+
+# Py
+*.pyc
+*.lprof
+
+# miselanious
+*.npz
+*.gz
+*.zip
+*.pdf
+*.png
+stl_exercise
+softmax_exercise
+stackedae_exercise
+dataset
+sparseautoencoder-master
+starter
+mldata
+*result*
