@@ -18,30 +18,6 @@ from sklearn.utils import shuffle
 from utils import *
 
 
-USAGE = "usage: e.g. python %prog --i1 15 --i2 6000 --i3 20 --alpha1 0.005 --alpha2 0.01 --alpha3 0.005"
-VERSION = 'v1.0.0'
-
-
-samples = 10000
-
-
-def get_options():
-    """TODO: Docstring for get_options.
-    :returns: TODO
-
-    """
-    parser = OptionParser(usage=USAGE, version=VERSION)
-
-    parser.add_option('-f', '--feature', action='store', type='int',
-            help='The number of raw feature', default=FILESIZE, dest='n')
-    parser.add_option('--feature_type', action='store', type='string',
-            help='Keyword Or Byte', default='keyword', dest='feature_type')
-
-    len(sys.argv) == 1 and exit(parser.print_help())
-
-    return parser.parse_args()
-
-
 def kl_divergence(rho, rho_cap):
     """TODO: Docstring for kl_divergence.
 
@@ -260,8 +236,6 @@ def main():
     :returns: TODO
 
     """
-    # theano.config.exception_verbosity = 'high'
-
     test_mnist()
     # test_edge_detector()
 

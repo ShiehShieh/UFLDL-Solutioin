@@ -7,7 +7,7 @@ from theano import function
 from sklearn.datasets import fetch_mldata
 from sklearn.preprocessing import OneHotEncoder, scale
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
-from softmax import train_softmax, softmax_predict, softmax2class_max
+from softmax import train_softmax, softmax_predict, softmax2class_max, cost4softmax
 from autoencoder import train_autoencode, ae_encode, visualize_ae_image, process_grey
 from utils import *
 
@@ -70,29 +70,32 @@ def sae_extract(x, weights):
     return pred
 
 
-def finetune_sae(X, y, weights, finetune_iter, alpha):
+def finetune_sae(X, y, weights, finetune_iter, alpha, decay):
     """TODO: Docstring for finetune_sae.
 
     :arg1: TODO
     :returns: TODO
 
     """
-    x = T.matrix(name='x')
-    pred = sae_extract(x, weights[:-1])
+    m = X.shape[0]
+    t_x = T.matrix(name='x')
+    t_y = T.matrix(name='x')
+    pred = sae_extract(t_x, weights[:-1])
     pred = softmax_predict(pred, *weights[-1]) # weights[-1][0], weights[-1][1])
-    cost = T.mean(T.nnet.binary_crossentropy(pred, y))
+    cost = cost4softmax(pred, t_y, m, decay, weights[-1][0])
+
     unroll = []
     for hp in weights:
         unroll.append(hp[0])
         unroll.append(hp[1])
     grad = T.grad(cost, unroll)
 
-    trainit = init_gd_trainer(inputs=[x,], outputs=[pred, cost],
+    trainit = init_gd_trainer(inputs=[t_x, t_y], outputs=[pred, cost],
                               name='trainit', params=unroll,
                               grad=grad, alpha=alpha)
 
     for i in range(finetune_iter):
-        pred, err = trainit(X)
+        pred, err = trainit(X, y)
         if i%100 == 0:
             print 'iter: %f, err: %f\n' % (i, err)
 
@@ -105,7 +108,7 @@ def main():
 
     """
     alpha = 1.
-    decay = 0.06
+    decay = 0.02
     iter_num = 100
     finetune_iter = 100
     hyper_params = {'hidden_layers_sizes':[196, 100,], 'iter_nums':[100, 100,],
@@ -122,9 +125,9 @@ def main():
 
     params, extracted = pretrain_sae(x_train, hyper_params)
     params.append(train_softmax(extracted, y_train, iter_num, alpha, decay))
-    weights = finetune_sae(x_train, y_train, params, finetune_iter, alpha)
+    weights = finetune_sae(x_train, y_train, params, finetune_iter, alpha, decay)
 
-    all_label = np.array([0,1,2,3,4])
+    all_label = np.array(range(0, 5))
     pred = all_label[softmax2class_max(sae_predict(x_test, weights))]
     print accuracy_score(y_test, pred)
     print classification_report(y_test, pred)

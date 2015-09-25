@@ -7,8 +7,8 @@ from theano import shared
 from utils import *
 from sklearn.datasets import fetch_mldata
 from sklearn.preprocessing import OneHotEncoder, scale
-from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
 from sklearn.cross_validation import train_test_split
+from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
 
 
 def softmax_predict(x, weight, b):
@@ -43,6 +43,15 @@ def softmax2class_max(pred):
     return np.argmax(pred, axis=1)
 
 
+def cost4softmax(z, t_y, m, decay, theta):
+    """TODO: Docstring for cost4softmax.
+    :returns: TODO
+
+    """
+    return -T.sum(T.log(T.exp(T.sum(z * t_y, 1))/T.sum(T.exp(z), 1)))/m \
+            + (decay/(2.0 * m)) * T.sum(theta ** 2.0)
+
+
 def train_softmax(X, y, iter_num, alpha, decay):
     """TODO: Docstring for train_softmax.
     :returns: TODO
@@ -57,8 +66,7 @@ def train_softmax(X, y, iter_num, alpha, decay):
     b = shared(params[1], name='b', borrow=True)
 
     z = softmax_predict(t_X, theta, b)
-    J = -T.sum(T.log2(T.exp(T.sum(z * t_y, 1)) / T.sum(T.exp(z), 1)))/m \
-        + (decay / (2.0 * m)) * T.sum(theta ** 2.0)
+    J = cost4softmax(z, t_y, m, decay, theta)
     grad = T.grad(J, [theta, b])
 
     trainit = init_gd_trainer(inputs=[t_X, t_y], outputs=[z, J,], name='trainit',
@@ -79,15 +87,15 @@ def main():
     :returns: TODO
 
     """
-    alpha = 0.6
-    iter_num = 1200
-    decay = 0.02 # the performance of 0.0001 is not so good.
+    alpha = 1.
+    iter_num = 600
+    decay = 0.008 # the performance of 0.0001 is not so good.
     enc = OneHotEncoder(sparse=False)
     mnist = fetch_mldata('MNIST original', data_home='./')
     x_train, x_test, y_train, y_test = \
             train_test_split(scale(mnist.data.astype(float)).astype('float32'),
                              mnist.target.astype('float32'),
-                             test_size=0.15, random_state=0)
+                             test_size=0.146, random_state=0)
     y_train = enc.fit_transform(y_train.reshape(y_train.shape[0],1)).astype('float32')
     theta, b = train_softmax(x_train, y_train, iter_num, alpha, decay)
 
