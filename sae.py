@@ -5,6 +5,7 @@
 import theano.tensor as T
 from theano import function
 from sklearn.datasets import fetch_mldata
+from sklearn.cross_validation import train_test_split
 from sklearn.preprocessing import OneHotEncoder, scale
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
 from softmax import train_softmax, softmax_predict, softmax2class_max, cost4softmax
@@ -108,26 +109,31 @@ def main():
 
     """
     alpha = 1.
-    decay = 0.02
-    iter_num = 100
-    finetune_iter = 100
-    hyper_params = {'hidden_layers_sizes':[196, 100,], 'iter_nums':[100, 100,],
-                    'alphas':[1., 1.,], 'decays':[0.0001, 0.001,],
-                    'betas':[3, 3,], 'rhos':[0.01, 0.01,]}
+    decay = 0.0006
+    iter_num = 600
+    finetune_iter = 220
+    hyper_params = {
+            'hidden_layers_sizes':[196,], 'iter_nums':[400,],
+            'alphas':[1.,], 'decays':[0.003,],
+            'betas':[3,], 'rhos':[0.1,]
+            }
 
     enc = OneHotEncoder(sparse=False)
     mnist = fetch_mldata('MNIST original', data_home='./')
-    x_train = scale(mnist.data[mnist.target>=5,:].astype(float)).astype('float32')
-    y_train = mnist.target[mnist.target>=5]
+    x_train, x_test, y_train, y_test = \
+            train_test_split(scale(mnist.data.astype(float)).astype('float32'),
+                             mnist.target.astype('float32'),
+                             test_size=0.5, random_state=0)
+    x_unlabeled = scale(mnist.data[mnist.target>=5,:].astype(float)).astype('float32')
     y_train = enc.fit_transform(y_train.reshape(y_train.shape[0],1)).astype('float32')
-    x_test = scale(mnist.data[mnist.target<5,:].astype(float)).astype('float32')
-    y_test = mnist.target[mnist.target<5]
 
-    params, extracted = pretrain_sae(x_train, hyper_params)
+    t_x = T.matrix()
+    params, extracted = pretrain_sae(x_unlabeled, hyper_params)
+    extracted = function(inputs=[t_x], outputs=[sae_extract(t_x, params)])(x_train)[0]
     params.append(train_softmax(extracted, y_train, iter_num, alpha, decay))
     weights = finetune_sae(x_train, y_train, params, finetune_iter, alpha, decay)
 
-    all_label = np.array(range(0, 5))
+    all_label = np.array(range(0, 10))
     pred = all_label[softmax2class_max(sae_predict(x_test, weights))]
     print accuracy_score(y_test, pred)
     print classification_report(y_test, pred)
